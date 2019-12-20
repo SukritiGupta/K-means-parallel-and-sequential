@@ -7,6 +7,7 @@
 #include <vector>
 #include <math.h>
 #include <omp.h>
+#include <atomic>
 
 struct dim
 {
@@ -16,10 +17,9 @@ struct dim
 
 std::vector<dim> points;
 std::vector<dim> centroid;
-std::vector<int> belongs;
 
-int n, k,t;
-int delta;
+int n, k;
+std::atomic<int> delta;
 
 int Kbelong(int x)
 {
@@ -44,50 +44,20 @@ int Kbelong(int x)
 	return tempi;
 }
 
-void *PrintHello(void *threadarg) {
-	int s;
-	s = *((int *) threadarg);
-	int block=n/t;
-	int start=block*(s);
-	int finish=block*(s+1);
-	if (s==t-1)
-	{
-		finish=n;
-	}
 
-	// std::vector<int>::iterator it;
-	// if(start>=n)
-	// {
-	// 	std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!11";
-	// 	goto X;
-	// }
-	for (int i = start; i < finish; ++i)
-	{
-		belongs.at(i)=Kbelong(i);
-	}
-}
-
-
-void kmeans_omp(int T,int N, int K, int* data_points, int** cluster_points, float** centroids, int* num_iterations)
+void kmeans_omp(int t,int N, int K, int* data_points, int** cluster_points, float** centroids, int* num_iterations)
 {
 
 	n=N;
 	k=K;
-	t=T;
-	int iterlim=1500;
-	
 
 	int limit=n/1000;
+	int iterlim=1500;
+	
 
 
 	*cluster_points=(int*) malloc(4*N*sizeof(int));
 	*centroids=(float*) malloc(15000*3*K*sizeof(float));
-	// belongs.reserve(n*sizeof(int));
-
-	for (int i = 0; i < n; ++i)
-	{
-		belongs.push_back(k+1);
-	}
 
 	int* outp=*(cluster_points);
 	float* coutp=*(centroids);
@@ -130,6 +100,11 @@ void kmeans_omp(int T,int N, int K, int* data_points, int** cluster_points, floa
 	}
 	g=k;
 
+	// omp_set_num_threads(t);
+	// #pragma omp parallel
+	// {
+	// 	std::cout<<"hello world\n";
+	// }
 
 	int iter=0;
 	int sizek[k];
@@ -144,28 +119,16 @@ void kmeans_omp(int T,int N, int K, int* data_points, int** cluster_points, floa
 			sizek[i]=0;
 		}
 
-		int tid[t];
 
 		omp_set_num_threads(t);
-		#pragma omp parallel
+
 		#pragma omp for
- 		for( int i = 0; i < t; i++ ) 
- 		{
- 			tid[i]=i;
-      		PrintHello((void *)&(tid[i]));
-     
-   		}
-
-
-   		int tempi;
-   		for (int i = 0; i < n; ++i)
-   		{
-   			tempi=belongs.at(i);
-   			memk[tempi].push_back(i);
+		for (int i = 0; i < n; ++i)
+		{
+			int tempi=Kbelong(i);
+			memk[tempi].push_back(i);
 			sizek[tempi]++;
-   		}
-   		
-
+		}
 		double a=0, b=0, c=0;
 		for (int i = 0; i < k; ++i)
 		{
